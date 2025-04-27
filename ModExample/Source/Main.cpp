@@ -10,6 +10,8 @@
 #include <BYardSDK/AGUI2FontManager.h>
 #include <BYardSDK/AGameStateController.h>
 #include <BYardSDK/ATerrainInterface.h>
+#include <BYardSDK/ACamera.h>
+#include <BYardSDK/ASteer.h>
 
 #include <Toshi/THPTimer.h>
 #include <Toshi/TScheduler.h>
@@ -21,6 +23,8 @@ TOSHI_NAMESPACE_USING
 const T2CommandLine* g_pCommandLine;
 AGUI2TextBox*        g_pTextBox;
 
+TBOOL g_bTopDownCamera = TFALSE;
+
 void AGUI2_MainPostRenderCallback()
 {
 	if ( g_pTextBox )
@@ -31,11 +35,62 @@ void AGUI2_MainPostRenderCallback()
 	}
 }
 
+struct APlayerManager;
+struct AUnitPlayer;
+
+MEMBER_HOOK( 0x00463350, ACameraHelper, AGTAStyleCameraHelper_UpdateCamera, TBOOL, TFLOAT a_fDeltaTime )
+{
+	if ( g_bTopDownCamera )
+	{
+		APlayerManager* pPlayerManager = *(APlayerManager**)0x007b48a8;
+		TFLOAT          fVelocity      = 0.0f;
+
+		if ( pPlayerManager )
+		{
+			//-----------------------------------------------------------------------------
+			// NOTE: Use CALL or CALL_THIS macro to call different methods of the original game by address
+			// CALL      allows you to call any non-member method
+			// CALL_THIS allows you to call any member method
+			//-----------------------------------------------------------------------------
+			AUnitPlayer* pPlayer = CALL_THIS( 0x0061faf0, APlayerManager*, AUnitPlayer*, pPlayerManager, TINT, 0 );
+
+			if ( pPlayer )
+			{
+				ASteer* pSteer = *(ASteer**)( TUINTPTR( pPlayer ) + 0x1C );
+
+				if ( pSteer )
+				{
+					TVector4 vecPosition = *pSteer->GetPosition();
+					vecPosition.y -= 18.0f;
+
+					TQuaternion quatRotation;
+					quatRotation.SetFromEulerRollPitchYaw( -TMath::PI / 2, 0.0f, 0.0f );
+
+					m_pCamera->m_Matrix.SetFromQuaternion( quatRotation );
+					m_pCamera->m_Matrix.SetTranslation( vecPosition );
+				}
+			}
+		}
+
+		return TTRUE;
+	}
+	
+	return CallOriginal( a_fDeltaTime );
+}
+
 class AModExample : public AModInstance
 {
 public:
 	TBOOL OnLoad() OVERRIDE
 	{
+		//-----------------------------------------------------------------------------
+		// Note: there are two ways to set up function hooks:
+		// 1. Using InstallHook to set at any address
+		// 2. Using ModCore's AHooks class to set at some specific function
+		//-----------------------------------------------------------------------------
+
+		InstallHook<AGTAStyleCameraHelper_UpdateCamera>();
+
 		// Setup hook to the AGUI2::MainPostRenderCallback method to draw our custom text box on top of anything else
 		return AHooks::AddHook( Hook_AGUI2_MainPostRenderCallback, HookType_Before, AGUI2_MainPostRenderCallback );
 	}
@@ -80,6 +135,7 @@ public:
 	void OnImGuiRender( AImGUI* a_pImGui ) OVERRIDE
 	{
 		ImGui::Text( "Hello, world!" );
+		ImGui::Checkbox( "Top Down Camera", &g_bTopDownCamera );
 	}
 
 	virtual void OnImGuiRenderOverlay( AImGUI* a_pImGui )
