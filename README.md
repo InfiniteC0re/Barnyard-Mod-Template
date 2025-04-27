@@ -20,7 +20,7 @@ Requires BYModLoader in order to start the mod.
 1. Instantiate a new repository from this template
 2. Create OpenBarnyard folder (1) somewhere on your disk
 3. Create Game folder in the previously created directory (1)
-4. Copy game assets and the BYardModLoader.exe file into the Game folder (get it from the Winter Mod or somewhere else)
+4. Copy original game assets and the BYardModLoader.exe (get it from the Winter Mod or somewhere else) file into the Game folder
 5. Clone your repository, placing it's folder in the OpenBarnyard directory
 6. At this moment the structure should look like this:
 
