@@ -12,6 +12,7 @@
 #include <BYardSDK/ATerrainInterface.h>
 #include <BYardSDK/ACamera.h>
 #include <BYardSDK/ASteer.h>
+#include <BYardSDK/APlayerManager.h>
 
 #include <Toshi/THPTimer.h>
 #include <Toshi/TScheduler.h>
@@ -20,10 +21,14 @@
 
 TOSHI_NAMESPACE_USING
 
-const T2CommandLine* g_pCommandLine;
-AGUI2TextBox*        g_pTextBox;
+//-----------------------------------------------------------------------------
+// NOTE: Use CALL or CALL_THIS macro to call different methods of the original game by address
+// CALL      allows you to call any non-member method
+// CALL_THIS allows you to call any member method
+//-----------------------------------------------------------------------------
 
-TBOOL g_bTopDownCamera = TFALSE;
+AGUI2TextBox* g_pTextBox       = TNULL;
+TBOOL         g_bTopDownCamera = TFALSE;
 
 void AGUI2_MainPostRenderCallback()
 {
@@ -35,47 +40,31 @@ void AGUI2_MainPostRenderCallback()
 	}
 }
 
-struct APlayerManager;
-struct AUnitPlayer;
-
 MEMBER_HOOK( 0x00463350, ACameraHelper, AGTAStyleCameraHelper_UpdateCamera, TBOOL, TFLOAT a_fDeltaTime )
 {
-	if ( g_bTopDownCamera )
+	if ( !g_bTopDownCamera )
+		return CallOriginal( a_fDeltaTime );
+	
+	// Top down camera
+	if ( APlayerManager::IsSingletonCreated() )
 	{
-		APlayerManager* pPlayerManager = *(APlayerManager**)0x007b48a8;
-		TFLOAT          fVelocity      = 0.0f;
-
-		if ( pPlayerManager )
+		if ( AUnitPlayer* pPlayer = APlayerManager::GetSingleton()->GetPlayer( APlayerManager::PLAYER_1 ) )
 		{
-			//-----------------------------------------------------------------------------
-			// NOTE: Use CALL or CALL_THIS macro to call different methods of the original game by address
-			// CALL      allows you to call any non-member method
-			// CALL_THIS allows you to call any member method
-			//-----------------------------------------------------------------------------
-			AUnitPlayer* pPlayer = CALL_THIS( 0x0061faf0, APlayerManager*, AUnitPlayer*, pPlayerManager, TINT, 0 );
-
-			if ( pPlayer )
+			if ( ASteer* pSteer = pPlayer->GetSteer() )
 			{
-				ASteer* pSteer = *(ASteer**)( TUINTPTR( pPlayer ) + 0x1C );
+				TVector4 vecPosition = *pSteer->GetPosition();
+				vecPosition.y -= 18.0f;
 
-				if ( pSteer )
-				{
-					TVector4 vecPosition = *pSteer->GetPosition();
-					vecPosition.y -= 18.0f;
+				TQuaternion quatRotation;
+				quatRotation.SetFromEulerRollPitchYaw( -TMath::PI / 2, 0.0f, 0.0f );
 
-					TQuaternion quatRotation;
-					quatRotation.SetFromEulerRollPitchYaw( -TMath::PI / 2, 0.0f, 0.0f );
-
-					m_pCamera->m_Matrix.SetFromQuaternion( quatRotation );
-					m_pCamera->m_Matrix.SetTranslation( vecPosition );
-				}
+				m_pCamera->m_Matrix.SetFromQuaternion( quatRotation );
+				m_pCamera->m_Matrix.SetTranslation( vecPosition );
 			}
 		}
-
-		return TTRUE;
 	}
-	
-	return CallOriginal( a_fDeltaTime );
+
+	return TTRUE;
 }
 
 class AModExample : public AModInstance
@@ -195,7 +184,6 @@ extern "C"
 		toshiParams.szLogAppName  = "ModExample";
 
 		TUtil::ToshiCreate( toshiParams );
-		g_pCommandLine = a_pCommandLine;
 
 		return new AModExample();
 	}
