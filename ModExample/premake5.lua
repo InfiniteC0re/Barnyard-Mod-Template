@@ -1,7 +1,7 @@
 project "ModExample"
 	kind "SharedLib"
 	language "C++"
-	staticruntime "on"
+	staticruntime "off"
 	
 	pchheader "pch.h"
 	pchsource "Source/pch.cpp"
