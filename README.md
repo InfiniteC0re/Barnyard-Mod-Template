@@ -38,3 +38,15 @@ Requires BYModLoader in order to start the mod.
 7. CD into your repository folder
 8. Execute `GenerateProjects-WIN-VS2022.bat` in order to generate file projects
 9. Open the generated solution file
+
+## Ghidra Repository
+
+In case you want to find some specific method to hook/call it or learn something about how the game (or the engine) works, you can use our Ghidra repository where the game is being reverse engineered.
+
+```
+Version:  11.3.2
+File:     Barnyard/Barnyard (Windows)
+Hostname: repository.opentoshi.net
+Username: guest
+Password: guest1
+```
